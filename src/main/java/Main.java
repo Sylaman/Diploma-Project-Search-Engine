@@ -1,13 +1,33 @@
-import java.io.File;
-import java.util.Arrays;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.List;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
-        BooleanSearchEngine engine = new BooleanSearchEngine(new File("pdfs"));
-        System.out.println(engine.search("бизнес"));
-
-        // здесь создайте сервер, который отвечал бы на нужные запросы
-        // слушать он должен порт 8989
-        // отвечать на запросы /{word} -> возвращённое значение метода search(word) в JSON-формате
+    public static void main(String[] args) {
+        try {
+            BooleanSearchEngine booleanSearchEngine = new BooleanSearchEngine(new File("pdfs"));
+            Gson gson = new GsonBuilder().create();
+            try (ServerSocket serverSocket = new ServerSocket(8989)) {
+                while (true) {
+                    try (Socket socket = serverSocket.accept(); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                        System.out.println("Введите ваш запрос в одно слово");
+                        String request = in.readLine();
+                        List<PageEntry> page = booleanSearchEngine.search(request);
+                        var json = gson.toJson(page);
+                        out.println(json);
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
+                }
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+        } catch (Exception exception) {
+            System.out.println(exception.getMessage());
+        }
     }
 }
+
